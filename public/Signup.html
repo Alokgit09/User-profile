@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Signup</title>
+    <!-- <link rel="stylesheet" href="./css/styles.css" /> -->
+    <style>
+      /* General Styling */
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family: Arial, sans-serif;
+      }
+
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background-color: #f4f4f4;
+      }
+
+      /* Container */
+      .container {
+        background: white;
+        padding: 30px;
+        width: 100%;
+        max-width: 400px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        text-align: center;
+      }
+
+      /* Heading */
+      h2 {
+        margin-bottom: 20px;
+        color: #333;
+      }
+
+      /* Input Group */
+      .input-group {
+        text-align: left;
+        margin-bottom: 15px;
+      }
+
+      .input-group label {
+        display: block;
+        font-size: 14px;
+        margin-bottom: 5px;
+        color: #333;
+      }
+
+      .input-group input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 14px;
+      }
+
+      /* File Upload Styling */
+      .input-group input[type="file"] {
+        padding: 5px;
+      }
+
+      /* Button */
+      button {
+        width: 100%;
+        padding: 10px;
+        background-color: #4f9ee1;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: 0.3s;
+      }
+
+      button:hover {
+        background-color: #3a8cd0;
+      }
+
+      /* Login Link */
+      .login-link {
+        margin-top: 10px;
+        font-size: 14px;
+      }
+
+      .login-link a {
+        color: #4f9ee1;
+        text-decoration: none;
+        font-weight: bold;
+      }
+
+      .login-link a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <form id="signupForm">
+        <h2>Sign Up</h2>
+
+        <div class="input-group">
+          <label for="name">Full Name</label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            placeholder="Enter your full name"
+            required
+          />
+        </div>
+
+        <div class="input-group">
+          <label for="email">Email Address</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            placeholder="Enter your email"
+            required
+          />
+        </div>
+
+        <div class="input-group">
+          <label for="profileicon">Profile Icon</label>
+          <input
+            type="file"
+            id="image"
+            name="image"
+            accept="image/*"
+          />
+        </div>
+
+        <div class="input-group">
+          <label for="password">Password</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="Enter your password"
+            required
+          />
+        </div>
+
+        <div class="input-group">
+          <label for="confirmPassword">Confirm Password</label>
+          <input
+            type="password"
+            id="confirmPassword"
+            name="confirmPassword"
+            placeholder="Confirm your password"
+            required
+          />
+        </div>
+
+        <button type="submit">Sign Up</button>
+
+        <p class="login-link">
+          Already have an account? <a href="/login">Login here</a>
+        </p>
+      </form>
+    </div>
+
+    <script>
+       document.getElementById("signupForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+
+    const formData = new FormData();
+    formData.append("name", document.getElementById("name").value);
+    formData.append("email", document.getElementById("email").value);
+    formData.append("image", document.getElementById("image").files[0]); // ✅ Fix
+    formData.append("password", document.getElementById("password").value);
+    formData.append("confirmPassword", document.getElementById("confirmPassword").value);
+
+    console.log("Sending Data:");
+    for (let pair of formData.entries()) {
+        console.log(pair[0], pair[1]); // ✅ Check if file is included
+    }
+
+    try {
+        const response = await fetch("http://localhost:2020/signup", {
+            method: "POST",
+            body: formData, 
+        });
+
+        const result = await response.json();
+        console.log(result);
+        alert(result.message);
+    } catch (error) {
+        console.error("Error:", error);
+        alert("An error occurred during signup.");
+    }
+});
+
+      </script>
+  </body>
+</html>

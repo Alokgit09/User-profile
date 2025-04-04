@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat Users</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+      }
+      .user-list {
+        list-style: none;
+        padding: 0;
+      }
+      .user {
+        padding: 10px;
+        border-bottom: 1px solid #ddd;
+        display: flex;
+        justify-content: space-between;
+        cursor: pointer;
+      }
+      .online {
+        color: green;
+      }
+      .offline {
+        color: red;
+      }
+      .no-users {
+        color: gray;
+        text-align: center;
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Users Available for Chat</h2>
+    <ul class="user-list" id="userList">
+      <li class="no-users">Loading users...</li>
+    </ul>
+
+    <script>
+      async function fetchUsers() {
+        try {
+          const token = localStorage.getItem("token");
+          console.log("Token from localStorage:", token);
+       
+          const response = await fetch("http://localhost:2020/chatlist", {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`, // Ensure "Bearer" is included
+            },
+          });
+          console.log("Response Status:", response.status);
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+          const data = await response.json();
+          if (data.data && data.data.length > 0) {
+            renderUsers(data.data);
+          } else {
+            document.getElementById("userList").innerHTML =
+              '<li class="no-users">No users available for chat.</li>';
+          }
+        } catch (error) {
+          console.error("Error fetching users:", error);
+          document.getElementById("userList").innerHTML =
+            '<li class="no-users">Error loading users</li>';
+        }
+      }
+
+      function renderUsers(users) {
+        const userList = document.getElementById("userList");
+        userList.innerHTML = ""; // ✅ Fixed variable name
+
+        users.forEach((user) => {
+          // ✅ Fixed looping method
+          const userId = user._id; // ✅ Fixed user ID extraction
+          const li = document.createElement("li");
+          li.classList.add("user"); // ✅ Fixed class addition
+          li.innerHTML = `
+                    <span>${user.name}</span>
+                    <span class="${user.status}">${user.status}</span>
+                `;
+          li.onclick = () => openChatBox(userId); // ✅ Fixed event name
+          userList.appendChild(li);
+        });
+      }
+
+      function openChatBox(userId) {
+    window.location.href = `/chatBox?user=${userId}`;
+}
+
+      fetchUsers();
+    </script>
+  </body>
+</html>

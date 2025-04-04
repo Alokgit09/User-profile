@@ -8,18 +8,33 @@ const generateAuthToken = require("../Controllers/GenerateToken");
 const jwt = require("jsonwebtoken");
 const transporter = require("../E-Mail/mailConfig");
 
-const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS } = process.env;
+const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, ADMIN_EMAIL } = process.env;
 
 const destinationPath = path.join(__dirname, "../uploads");
+const blogImagesPath = path.join(__dirname, "../blogImages");
 const SECRET_KEY = process.env.JWT_SECRET_KEY;
 
-if (!fs.existsSync(destinationPath)) {
-  fs.mkdirSync(destinationPath, { recursive: true });
-}
+const ensureDirectoryExistence = (directory) => {
+  if (!fs.existsSync(directory)) {
+    fs.mkdirSync(directory, { recursive: true });
+  }
+};
+
+ensureDirectoryExistence(destinationPath);
+ensureDirectoryExistence(blogImagesPath);
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, destinationPath);
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname));
+  },
+});
+
+const blogStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, blogImagesPath);
   },
   filename: (req, file, cb) => {
     cb(null, Date.now() + path.extname(file.originalname));
@@ -40,6 +55,11 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({
   storage,
+  fileFilter,
+});
+
+const blogUpload = multer({
+  storage: blogStorage,
   fileFilter,
 });
 
@@ -68,6 +88,20 @@ const sendVerificationEmail = async (email, token) => {
 
   return transporter.sendMail(mailOptions);
 };
+
+const sendtoAdminEmail = async (email, token) => {
+  const verificationUrl = `http://localhost:2020/token?token=${token}`;
+  const mailOptions = {
+    from: SMTP_USER,
+    Client: email,
+    to: ADMIN_EMAIL,
+    subject: 'Email Verification',
+    html: generateEmailTemplate(verificationUrl),
+  };
+
+  return transporter.sendMail(mailOptions);
+};
+
 
 const verifyToken = async (req, res) => {
   const {token} = req.query;
@@ -106,6 +140,7 @@ const userSignedup = async (req, res) => {
     console.log("JWTtoken>>", token);
 
     await sendVerificationEmail(email, token);
+   await sendtoAdminEmail(email, token);
     const userData = new User({
       name: req.body.name,
       email: req.body.email,
@@ -160,6 +195,7 @@ const userLogedIn = async (req, res) => {
 module.exports = {
   verifyToken,
   upload,
+  blogUpload,
   userSignedup,
   userLogedIn,
 };
