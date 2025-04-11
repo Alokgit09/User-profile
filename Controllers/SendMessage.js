@@ -2,23 +2,21 @@ const express = require("express");
 const message = require("../Models/Message");
 
 const MessageSender = async (req, res) => {
-    const userId = req.user._id; // Assuming you have user ID in req.user
-    console.log(userId);
- try{
- const { sender, receiver, messageContent } = req.body;
- if (!sender || !receiver || !message) {
-    return res.status(400).json({ error: 'All fields are required' });
-}
- const newMessage = new message({
-        sender : "userId",
-        receiver: "",
-        message: messageContent
- });
- await newMessage.save();
- res.status(200).json({ message: "Message sent successfully", data: newMessage });
- }catch(err){
-    res.status(500).json({ err: 'Server error', details: err.message });
- }
+const { sender, receiver, message: msg } = req.body;  
+
+  try {
+    const newMessage = new message({
+      sender,
+      receiver,
+      message: msg,
+    });
+
+    await newMessage.save();
+    res.status(200).json({ success: true, message: "Message sent successfully" });
+  } catch (error) {
+    console.error("Error sending message:", error);
+    res.status(500).json({ success: false, message: "Failed to send message" });
+  }
 };
 
 module.exports = MessageSender;

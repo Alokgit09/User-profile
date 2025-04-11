@@ -6,7 +6,7 @@ const SECRET_KEY = process.env.JWT_SECRET_KEY;
 const userAuthanting = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
-        console.log("🔍 Received Authorization Header:", authHeader);
+       // console.log("🔍 Received Authorization Header:", authHeader);
 
         if (!authHeader || !authHeader.startsWith("Bearer ")) {
             return res.status(401).json({ message: "Authorization header is missing or invalid" });
@@ -15,7 +15,7 @@ const userAuthanting = async (req, res, next) => {
         const token = authHeader.split(" ")[1]; // Correct way to extract token
         const verify = jwt.verify(token, SECRET_KEY);
 
-        console.log("✅ Token Verified:", verify);
+        // console.log("✅ Token Verified:", verify);
 
         const user = await User.findById(verify.id);
         if (!user) {

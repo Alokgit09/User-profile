@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Home - My Website</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f5f5f5;
+        color: #333;
+      }
+
+      header {
+        background-color: #4f9ee1;
+        color: white;
+        padding: 30px 20px;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      nav {
+        background-color: #2c3e50;
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        padding: 12px 0;
+      }
+
+      nav a {
+        color: white;
+        text-decoration: none;
+        font-weight: 500;
+        transition: background-color 0.3s ease;
+        padding: 10px 16px;
+        border-radius: 5px;
+      }
+
+      nav a:hover {
+        background-color: #34495e;
+      }
+
+      .section {
+        padding: 50px 20px;
+        max-width: 800px;
+        margin: auto;
+        text-align: center;
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+        margin-top: 40px;
+      }
+
+      .section h2 {
+        margin-bottom: 30px;
+        color: #4f9ee1;
+      }
+
+      .user-list {
+        list-style: none;
+        padding: 0;
+      }
+
+      .user-list li {
+        background-color: #f0f8ff;
+        padding: 15px 20px;
+        margin: 10px 0;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        transition: background-color 0.2s ease;
+        cursor: pointer;
+      }
+
+      .user-list li:hover {
+        background-color: #d8ecff;
+      }
+
+      .user-list img {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        margin-right: 15px;
+      }
+
+      footer {
+        background-color: #2c3e50;
+        color: white;
+        text-align: center;
+        padding: 20px;
+        margin-top: 60px;
+      }
+
+      @media (max-width: 600px) {
+        nav {
+          flex-direction: column;
+        }
+
+        .section {
+          padding: 30px 15px;
+        }
+
+        .user-list li {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .user-list img {
+          margin-bottom: 10px;
+        }
+      }
+      .user-list li {
+        justify-content: space-between; /* already flex! */
+      }
+
+      .status {
+        font-size: 20px;
+        margin-left: auto;
+      }
+      span.new-msg.active:after {
+        content: "New";
+        color: green;
+        font-size: 16px;
+        font-weight: 600;
+      }
+      .new-msg.active {
+        margin-left: 15px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>My Website</h1>
+      <p>Welcome to my awesome homepage</p>
+    </header>
+
+    <nav>
+      <a href="/home">Home</a>
+      <a href="/">SignUp</a>
+      <a href="/login">Login</a>
+      <a href="#">Contact</a>
+    </nav>
+
+    <!-- <div class="hero">
+      <h1>Welcome to Chat List</h1>
+      <p>Your success starts here</p>
+    </div> -->
+
+    <div class="section">
+      <h2>Users Available for Chat</h2>
+      <ul class="user-list" id="userList">
+        <li class="no-users">Loading users...</li>
+      </ul>
+    </div>
+
+    <footer>
+      <p>&copy; 2025 My Website. All rights reserved.</p>
+    </footer>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const socket = io("http://localhost:2020");
+
+      document.addEventListener("DOMContentLoaded", function () {
+        let username = localStorage.getItem("username");
+        if (username) {
+          document.querySelector(
+            "header h1"
+          ).textContent = `Welcome, ${username}!`;
+        } else {
+          document.querySelector("header h1").textContent =
+            "Welcome to My Website!";
+        }
+
+        fetchUsers();
+      });
+
+      socket.on("connect", () => {
+        console.log("🔌 Connected to socket:", socket.id);
+
+        const myUserId = localStorage.getItem("userId");
+        if (myUserId) {
+          socket.emit("register", myUserId);
+          console.log("📝 Registered user:", myUserId);
+        }
+      });
+
+      async function fetchUsers() {
+        try {
+          const token = localStorage.getItem("token");
+          const currentEmail = localStorage.getItem("email");
+          if (!token) {
+            throw new Error("Token not found");
+          }
+
+          const res = await axios.get("http://localhost:2020/chatlist", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          console.log("Response from /chatlist:", res.data.data);
+
+          const users = res.data.data; // your array is inside `data.data`
+          if (!Array.isArray(users)) {
+            throw new Error("User list is not an array");
+          }
+          //  users = users.filter((user) => user.email == currentEmail);
+          const userList = document.getElementById("userList");
+          userList.innerHTML = ""; // clear the loading text
+
+          users.forEach((user) => {
+            const li = document.createElement("li");
+            const index = users.indexOf(user) + 1; // get the index of the user in the array
+            li.dataset.userId = user._id; // set the user ID as a data attribute
+            li.id = `user-${user._id}`;
+            li.innerHTML = `
+  <img src="./media/user${index}.png" width="40" height="40" style="border-radius: 50%; margin-right: 10px;">
+  <strong>${user.name}</strong>
+  <span class="new-msg"></span>
+  <span class="status" style="margin-left: auto;"></span>
+`;
+            li.addEventListener("click", () => {
+              localStorage.setItem("chatWithId", user._id);
+              localStorage.setItem("chatWithName", user.name);
+
+              // ✅ Remove "new" badge on click
+              const dot = li.querySelector(".new-msg");
+              if (dot) dot.classList.remove("active");
+
+              window.location.href = "/chatbox";
+            });
+            userList.appendChild(li);
+          });
+
+          const userListItems = document.querySelectorAll("li");
+          userListItems.forEach((item) => {
+            const userid = item.dataset.userId;
+            if (userid == localStorage.getItem("userId")) {
+              return item.remove();
+            }
+          });
+
+          setInterval(() => {
+            const allUsers = document.querySelectorAll("#userList li");
+            allUsers.forEach((userEl) => {
+              const userId = userEl.dataset.userId;
+              if (userId == localStorage.getItem("userId")) return;
+
+              socket.emit("is_user_online", userId, (isOnline) => {
+                const statusEl = userEl.querySelector(".status");
+                statusEl.innerHTML = isOnline ? "🟢" : "⚪";
+              });
+            });
+          }, 2000);
+          // every 5 minutes
+
+          // console.log("User List Items:", userListItems);
+        } catch (error) {
+          console.error("❌ Unauthorized or failed to fetch:", error.message);
+          document.getElementById("userList").innerHTML =
+            '<li class="no-users">Failed to load users</li>';
+          window.location.href = "/login";
+        }
+      }
+
+      socket.on("receive_private_message", ({ senderId, message }) => {
+        const currentChatId = Number(localStorage.getItem("chatWithId"));
+        console.log(
+          `📩 Received message from ${senderId}: ${message} (current chat: ${currentChatId})`
+        );
+        if (senderId !== currentChatId) {
+          const userEl = document.getElementById(`user-${senderId}`);
+          if (userEl) {
+            const dot = userEl.querySelector(".new-msg");
+            // const chat = localStorage.setItem('message', message);
+            console.log("User Element dot:", dot);
+            if (dot) dot.classList.add("active");
+          }
+        }
+      });
+    </script>
+  </body>
+</html>

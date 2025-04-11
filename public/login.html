@@ -1,107 +1,168 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Login</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <style>
-        /* General Styles */
-body {
-    font-family: Arial, sans-serif;
-    background-color: #f4f4f4;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    margin: 0;
-}
+      /* General Styles */
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+      }
 
-/* Form Container */
-.container {
-    background: #fff;
-    padding: 30px;
-    border-radius: 10px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    width: 350px;
-    text-align: center;
-}
+      /* Form Container */
+      .container {
+        background: #fff;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        width: 350px;
+        text-align: center;
+      }
 
-/* Heading */
-h2 {
-    margin-bottom: 20px;
-    color: #333;
-}
+      /* Heading */
+      h2 {
+        margin-bottom: 20px;
+        color: #333;
+      }
 
-/* Input Groups */
-.input-group {
-    margin-bottom: 15px;
-    text-align: left;
-}
+      /* Input Groups */
+      .input-group {
+        margin-bottom: 15px;
+        text-align: left;
+      }
 
-.input-group label {
-    display: block;
-    font-size: 14px;
-    color: #555;
-    margin-bottom: 5px;
-}
+      .input-group label {
+        display: block;
+        font-size: 14px;
+        color: #555;
+        margin-bottom: 5px;
+      }
 
-.input-group input {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    font-size: 16px;
-}
+      .input-group input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-size: 16px;
+      }
 
-/* Button */
-button {
-    background-color: #4F9EE1;
-    color: white;
-    border: none;
-    padding: 10px;
-    width: 100%;
-    border-radius: 5px;
-    font-size: 16px;
-    cursor: pointer;
-    transition: 0.3s;
-}
+      /* Button */
+      button {
+        background-color: #4f9ee1;
+        color: white;
+        border: none;
+        padding: 10px;
+        width: 100%;
+        border-radius: 5px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: 0.3s;
+      }
 
-button:hover {
-    background-color: #3d89c6;
-}
+      button:hover {
+        background-color: #3d89c6;
+      }
 
-/* Signup Link */
-.signup-link {
-    margin-top: 10px;
-    font-size: 14px;
-}
+      /* Signup Link */
+      .signup-link {
+        margin-top: 10px;
+        font-size: 14px;
+      }
 
-.signup-link a {
-    color: #4F9EE1;
-    text-decoration: none;
-}
+      .signup-link a {
+        color: #4f9ee1;
+        text-decoration: none;
+      }
 
-.signup-link a:hover {
-    text-decoration: underline;
-}
-
+      .signup-link a:hover {
+        text-decoration: underline;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <h2>Login</h2>
-        <form action="/login" method="POST">
-            <div class="input-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" name="email" required>
-            </div>
-            <div class="input-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-            <button type="submit">Login</button>
-            <p class="signup-link">Don't have an account? <a href="/">Sign Up</a></p>
-        </form>
+      <h2>Login</h2>
+      <form action="/login" method="POST" id="loginForm">
+        <div class="input-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" required />
+        </div>
+        <div class="input-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" required />
+        </div>
+        <button type="submit">Login</button>
+        <p class="signup-link">
+          Don't have an account? <a href="/">Sign Up</a>
+        </p>
+      </form>
     </div>
-</body>
+    <script>
+      document
+        .getElementById("loginForm")
+        .addEventListener("submit", async function (event) {
+          event.preventDefault(); // Prevent the default form submission
+
+          const email = document.getElementById("email").value;
+          const password = document.getElementById("password").value;
+          try {
+            const response = await axios.post("http://localhost:2020/login", {
+              email,
+              password,
+            });
+            console.log("Login response:", response.data); // Log the response data for debugging
+            const token = response.data.Token;
+            const payload = getPayloadFromToken(token); // Decode the token to get user info
+            if (payload) {
+              console.log("Decoded Token Payload:", payload);
+              console.log("User ID from token:", payload.id); // Or payload.userId depending on your token
+            }
+            const username = response.data.username;
+            // console.log("Token:", token); // Log the token for debugging
+            // console.log("Username:", username); // Log the username for debugging
+            if (response.data) {
+              const token = response.data.Token;
+              const username = response.data.username;
+              localStorage.setItem("token", token); // Store the token in local storage
+              localStorage.setItem("email", email);
+              localStorage.setItem("username", username); // Store the email in local storage
+              localStorage.setItem("userId", payload.id); // Store the user ID in local storage
+              // loadHomePage(); // Load the home page
+              window.location.href = "/home"; // Redirect to the home page
+            } else {
+              alert(response.data.message || "Login failed!");
+            }
+          } catch (err) {
+            console.error(err);
+            alert("error: " + (err.response?.data?.message || err.message));
+          }
+        });
+
+      function getPayloadFromToken(token) {
+        try {
+          const base64Url = token.split(".")[1]; // Get the payload part
+          const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/"); // Fix base64 format
+          const jsonPayload = decodeURIComponent(
+            atob(base64)
+              .split("")
+              .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+              .join("")
+          );
+
+          return JSON.parse(jsonPayload); // Return as object
+        } catch (e) {
+          console.error("Failed to decode token payload:", e);
+          return null;
+        }
+      }
+    </script>
+  </body>
 </html>

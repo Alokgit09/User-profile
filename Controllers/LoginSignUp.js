@@ -172,10 +172,11 @@ const userLogedIn = async (req, res) => {
       if (checkPassword) {
         const userid = checkmail._id;
         const useremail = checkmail.email;
+        const username = checkmail.name;
         // Generate JWT token
         const token = await generateAuthToken(userid, useremail);
 
-        const mailToken = { email: useremail, Token: token };
+        const mailToken = { email: useremail, Token: token, username: username };
         // console.log("mailToken>>", mailToken);
         return res.status(201).json(mailToken);
       } else {

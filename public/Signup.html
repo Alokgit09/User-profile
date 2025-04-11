@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Signup</title>
     <!-- <link rel="stylesheet" href="./css/styles.css" /> -->
+    <!-- Include Axios from CDN if not using npm -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <style>
       /* General Styling */
       * {
@@ -128,12 +130,7 @@
 
         <div class="input-group">
           <label for="profileicon">Profile Icon</label>
-          <input
-            type="file"
-            id="image"
-            name="image"
-            accept="image/*"
-          />
+          <input type="file" id="image" name="image" accept="image/*" />
         </div>
 
         <div class="input-group">
@@ -167,36 +164,52 @@
     </div>
 
     <script>
-       document.getElementById("signupForm").addEventListener("submit", async function (e) {
-    e.preventDefault();
+      document
+        .getElementById("signupForm")
+        .addEventListener("submit", async function (e) {
+          e.preventDefault();
 
-    const formData = new FormData();
-    formData.append("name", document.getElementById("name").value);
-    formData.append("email", document.getElementById("email").value);
-    formData.append("image", document.getElementById("image").files[0]); // ✅ Fix
-    formData.append("password", document.getElementById("password").value);
-    formData.append("confirmPassword", document.getElementById("confirmPassword").value);
+          const formData = new FormData();
+          formData.append("name", document.getElementById("name").value);
+          formData.append("email", document.getElementById("email").value);
+          formData.append("image", document.getElementById("image").files[0]); // ✅ Fix
+          formData.append(
+            "password",
+            document.getElementById("password").value
+          );
+          formData.append(
+            "confirmPassword",
+            document.getElementById("confirmPassword").value
+          );
 
-    console.log("Sending Data:");
-    for (let pair of formData.entries()) {
-        console.log(pair[0], pair[1]); // ✅ Check if file is included
-    }
+          console.log("Sending Data:");
+          for (let pair of formData.entries()) {
+            console.log(pair[0], pair[1]); // ✅ Check if file is included
+          }
 
-    try {
-        const response = await fetch("http://localhost:2020/signup", {
-            method: "POST",
-            body: formData, 
+          try {
+            const response = await axios.post(
+              "http://localhost:2020/signup",
+              formData
+            );
+            let user = response.data.user;
+           // console.log("Response Data:", response.data.user); // ✅ Check the response
+            console.log("result>>", response.data);
+            if (response.data) {
+              console.log("Redirecting to home...");
+              localStorage.setItem('username', user.name); // Store the username in localStorage
+              localStorage.setItem('userId', user._id); // Store the user ID in localStorage
+              window.location.href = "/home";   
+             // document.getElementById("signupForm").reset();
+              
+            } else {
+              alert(response.data.message);
+            }
+          } catch (error) {
+            console.error("Error:", error);
+            alert("An error occurred during signup.");
+          }
         });
-
-        const result = await response.json();
-        console.log(result);
-        alert(result.message);
-    } catch (error) {
-        console.error("Error:", error);
-        alert("An error occurred during signup.");
-    }
-});
-
-      </script>
+    </script>
   </body>
 </html>
