@@ -1,67 +1,92 @@
-// Show popup
-function openVideoPopup() {
-  document.getElementById("videoCallPopup").style.display = "block";
-  startVideoCall();
-}
-//console.log("User ID:", localStorage.getItem('chatWithId')); // Log the userId to the console
-// Hide popup
-function hideVideoCallPopup() {
-  document.getElementById("videoCallPopup").style.display = "none";
-}
-
-// Close on "End Call" button
-document.getElementById("endCallBtn").addEventListener("click", () => {
-  endCall();
-});
-
-let localStream;
+let localStream = null;
 let remoteStream = new MediaStream();
 let peerConnection;
 let iceCandidateQueue = [];
 
+let remoteVideo = document.getElementById("remoteVideo");
+const localVideo = document.getElementById("localVideo");
+// const servers = {
+//   iceServers: [
+//     { urls: "stun:stun.l.google.com:19302" },
+//     { urls: "stun:stun.services.mozilla.org" },
+//     // Add a TURN server here if possible (e.g., from Xirsys or Coturn)
+//   ],
+// };
+
 const servers = {
-  iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    // Add a free TURN server for testing (or deploy your own with Coturn)
+    {
+      urls: "turn:openrelay.metered.ca:80",
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
+  ],
 };
+
+function openVideoPopup() {
+  document.getElementById("videoCallPopup").style.display = "block";
+  setTimeout(() => {
+    startVideoCall();
+  }, 200); // Wait a bit to make sure all teardown is done
+}
+
+function hideVideoCallPopup() {
+  document.getElementById("videoCallPopup").style.display = "none";
+}
+
+document.getElementById("endCallBtn").addEventListener("click", endCall);
+
+function setupOnTrackHandler() {
+  peerConnection.ontrack = (event) => {
+    console.log("🎬 Remote track received:", event.track.kind);
+
+    // Directly assign the stream to the video element
+    remoteVideo.srcObject = event.streams[0];
+
+    // Check if video tracks are present
+    const videoTracks = event.streams[0].getVideoTracks();
+    console.log("Video tracks in remote stream:", videoTracks);
+
+    // Force-play with muted audio to bypass autoplay
+    remoteVideo.muted = true; // Mute initially to allow autoplay
+    // remoteVideo.play().catch((err) => {
+    //   console.error("🚫 Remote video play() failed:", err);
+    // });
+
+    // Unmute audio on user click
+    document.addEventListener(
+      "click",
+      () => {
+        remoteVideo.muted = false;
+      },
+      { once: true }
+    );
+  };
+}
 
 function startVideoCall() {
   navigator.mediaDevices
     .getUserMedia({ video: true, audio: true })
     .then((stream) => {
       localStream = stream;
-      document.getElementById("localVideo").srcObject = stream;
-      console.log("🎞️ Remote stream tracks:1", remoteStream.getTracks());
+      localVideo.srcObject = stream;
 
       peerConnection = new RTCPeerConnection(servers);
 
-      // Add local tracks
       localStream.getTracks().forEach((track) => {
         peerConnection.addTrack(track, localStream);
       });
 
-      // Handle remote track
-      peerConnection.ontrack = (event) => {
-        console.log("📹 Remote track received:", event.track.kind);
-        remoteStream.addTrack(event.track); // ✅ Add each track
-        remoteVideo.srcObject = remoteStream; // ✅ Assign collected stream
-      };
-
-      console.log("🎞️ Remote stream tracks:4", remoteStream.getTracks());
-
+      setupOnTrackHandler();
       handleIceCandidate(receiverId, senderId);
-      // Handle ICE candidates
-      //   peerConnection.onicecandidate = (event) => {
-      //     if (event.candidate) {
-      //       socket.emit("candidate", {
-      //         to: receiverId,
-      //         from: senderId, // ✅ ADD THIS LINE
-      //         candidate: event.candidate,
-      //       });
-      //     }
-      //   };
 
-      // Create and send offer
       peerConnection
-        .createOffer()
+        .createOffer({
+          offerToReceiveAudio: true,
+          offerToReceiveVideo: true,
+        })
         .then((offer) => peerConnection.setLocalDescription(offer))
         .then(() => {
           socket.emit("offer", {
@@ -69,34 +94,24 @@ function startVideoCall() {
             from: senderId,
             offer: peerConnection.localDescription,
           });
-          console.log("Sending offer to:1", receiverId);
-          console.log("Sending send offer to:1", senderId);
         });
     })
     .catch((error) => {
-      console.error("Error accessing camera/mic:", error);
+      console.error("🚫 Error accessing camera/mic:", error);
     });
 }
 
-const remoteVideo = document.getElementById("remoteVideo");
-console.log("Remote video element:", remoteVideo);
-remoteVideo.onloadedmetadata = () => {
-  console.log("Remote video is playing 🎥");
-};
-
+// Handle incoming offer
 socket.on("offer", async ({ to, from, offer }) => {
-  console.log("📞 Incoming offer from:", offer, from, "to", to);
-
-  // ✅ Only request media if it's not already available
   if (!localStream) {
     try {
       localStream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: true,
       });
-      document.getElementById("localVideo").srcObject = localStream;
+      localVideo.srcObject = localStream;
     } catch (err) {
-      console.error("🚫 Error accessing media devices:", err);
+      console.error("🚫 Media access error:", err);
       return;
     }
   }
@@ -107,21 +122,12 @@ socket.on("offer", async ({ to, from, offer }) => {
     peerConnection.addTrack(track, localStream);
   });
 
-  peerConnection.ontrack = (event) => {
-    console.log("📹 Remote track received:", event.track.kind);
-    remoteStream.addTrack(event.track); // ✅ Add each track
-    remoteVideo.srcObject = remoteStream; // ✅ Assign collected stream
-  };
-
-  console.log("🎞️ Remote stream tracks:2", remoteStream.getTracks());
-  handleIceCandidate(from);
+  setupOnTrackHandler();
+  handleIceCandidate(from, to);
 
   await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-
   const answer = await peerConnection.createAnswer();
   await peerConnection.setLocalDescription(answer);
-
-  console.log("📤 Sending answer to:", from);
 
   socket.emit("answer", {
     answer,
@@ -129,26 +135,54 @@ socket.on("offer", async ({ to, from, offer }) => {
     from: to,
   });
 
-  // Add any queued ICE candidates
   for (const candidate of iceCandidateQueue) {
     await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
   }
   iceCandidateQueue = [];
 });
 
-socket.on("answer", async ({ from, answer }) => {
-  console.log("✅ Received answer from:", from);
+socket.on("answer", async ({ answer, to, from }) => {
+  console.log("answer received", from, answer);
   await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-
   for (const candidate of iceCandidateQueue) {
     await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
   }
   iceCandidateQueue = [];
 });
 
-// Handle candidate
+function handleIceCandidate(toId, fromId) {
+  // peerConnection.onicecandidate = (event) => {
+  //   if (event.candidate) {
+  //     if (!toId || !fromId) {
+  //       console.warn("❌ Missing to/from in ICE candidate emit", {
+  //         toId,
+  //         fromId,
+  //       });
+  //       return;
+  //     }
+  //     socket.emit("candidate", {
+  //       to: toId,
+  //       from: fromId,
+  //       candidate: event.candidate,
+  //     });
+  //   }
+  // };
+
+  peerConnection.onicecandidate = (event) => {
+    if (event.candidate) {
+      console.log("❄️ ICE Candidate:", event.candidate);
+      socket.emit("candidate", {
+        to: toId,
+        from: fromId,
+        candidate: event.candidate,
+      });
+    } else {
+      console.log("✅ ICE Gathering Complete");
+    }
+  };
+}
+
 socket.on("candidate", async ({ from, candidate }) => {
-  console.log("❄️ ICE candidate received from:", from);
   if (peerConnection?.remoteDescription) {
     await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
   } else {
@@ -156,33 +190,52 @@ socket.on("candidate", async ({ from, candidate }) => {
   }
 });
 
-function handleIceCandidate(toId, fromId = null) {
-  peerConnection.onicecandidate = (event) => {
-    if (event.candidate) {
-      const candidateData = {
-        to: toId,
-        candidate: event.candidate,
-      };
-      if (fromId) candidateData.from = fromId;
-
-      socket.emit("candidate", candidateData);
-    }
-  };
-}
 
 function endCall() {
-  if (peerConnection) {
-    peerConnection.close();
-    peerConnection = null;
-  }
+  console.log("Ending call...");
+  // Notify the other peer
+  // socket.emit("callEnded", { to: receiverId, from: senderId });
+  socket.emit("remoteCallEnded", { to: receiverId, from: senderId });
 
+  // 1. Stop all local media tracks (camera & mic)
   if (localStream) {
     localStream.getTracks().forEach((track) => track.stop());
     localStream = null;
   }
 
-  remoteVideo.srcObject = null;
-  localVideo.srcObject = null;
-  
+  // 2. Clear local video stream
+  if (localVideo.srcObject) {
+    localVideo.srcObject.getTracks().forEach((track) => track.stop());
+    localVideo.srcObject = null;
+  }
+  localVideo.pause();
+  localVideo.removeAttribute("src");
+  localVideo.removeAttribute("srcObject");
+  localVideo.load();
+
+  // 3. Clear remote video stream
+  if (remoteVideo.srcObject) {
+    remoteVideo.srcObject.getTracks().forEach((track) => track.stop());
+    remoteVideo.srcObject = null;
+  }
+  remoteVideo.pause();
+  remoteVideo.removeAttribute("src");
+  remoteVideo.removeAttribute("srcObject");
+  remoteVideo.load();
+
+  // 4. Close peer connection
+  if (peerConnection) {
+    peerConnection.close();
+    peerConnection = null;
+  }
+
+  // 5. Clear ICE candidates
+  iceCandidateQueue = [];
+
+  // 6. Hide video call UI
   hideVideoCallPopup();
+
+  console.log("✅ Call fully ended and video elements cleared.");
 }
+
+

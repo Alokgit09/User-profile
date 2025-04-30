@@ -1,6 +1,6 @@
 module.exports = (io) => {
   let users = {}; // Store users and their socket IDs
- 
+
   io.on("connection", (socket) => {
     console.log(`User connected: ${socket.id}`);
 
@@ -12,25 +12,36 @@ module.exports = (io) => {
     });
 
     socket.on("offer", ({ to, from, offer }) => {
-      console.log("📡 Offer received from", from, "to", to);
+      console.log(`📤 Offer received at server from ${from} to ${to}`);
       const targetSocketId = users[to];
-  
       if (targetSocketId) {
-        console.log("📨 Sending offer to socket ID:", targetSocketId);
+        console.log(`Forwarding offer from ${from} to ${to}`);
         io.to(targetSocketId).emit("offer", { offer, from, to });
-      } else {
-        console.log("❌ No socket found for user", to);
       }
     });
-  
+
+    // Answer forwarding
     socket.on("answer", ({ answer, to, from }) => {
       console.log(`📥 Answer received at server from ${from} to ${to}`);
-      io.to(to).emit("answer", { answer, from, to });
+      const targetSocketId = users[to];
+      if (targetSocketId) {
+        console.log(`Forwarding answer from ${from} to ${to}`);
+        io.to(targetSocketId).emit("answer", { answer, from, to });
+      }
     });
 
     socket.on("candidate", ({ candidate, to, from }) => {
-      console.log(`Forwarding ICE candidate from ${from} to ${to}`);
-      io.to(to).emit("candidate", { candidate, from });
+      const toSocketId = users[to];
+      if (toSocketId) {
+        console.log(`Forwarding ICE candidate from ${from} to ${to}`);
+        io.to(toSocketId).emit("candidate", { candidate, from });
+      } else {
+        console.warn(`No socket ID found for user ${to}`);
+      }
+    });
+
+    socket.on("callEnded", ({ to, from }) => {
+      socket.to(to).emit("remoteCallEnded");
     });
 
     // Handle public message (your original chat)
@@ -64,8 +75,11 @@ module.exports = (io) => {
     socket.on("disconnect", () => {
       for (let userId in users) {
         if (users[userId] === socket.id) {
-          console.log(`User ${userId} disconnected`);
+          // console.log(`User ${userId} disconnected`);
           delete users[userId];
+          console.log(
+            `❌ User ${userId} disconnected and removed from users map`
+          );
           break;
         }
       }
