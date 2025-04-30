@@ -55,7 +55,8 @@ app.use(
   })
 );
 const port = 2020;
-app.use(express.static("public"));
+//app.use(express.static("public"));
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.json());
 // app.set("view engine", "ejs");
 // app.set("views", path.resolve("./Views"));
